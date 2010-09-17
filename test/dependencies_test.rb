@@ -91,23 +91,6 @@ class DependenciesTest < Test::Unit::TestCase
       end
     end
 
-    test "load environment-specific dependencies" do
-      begin
-        ENV["RACK_ENV"] = "integration"
-
-        with_dependencies "bar\nbarz 2.0 (test)\nbaz 1.0 (integration)" do
-          do_require
-
-          assert $:.include?(File.expand_path("vendor/bar/lib"))
-          assert $:.include?(File.expand_path("vendor/baz-1.0/lib"))
-          assert !$:.include?(File.expand_path("vendor/barz-2.0/lib"))
-        end
-
-      ensure
-        ENV.delete "RACK_ENV"
-      end
-    end
-
     teardown do
       $LOAD_PATH.replace(@load_path)
     end
@@ -134,9 +117,9 @@ class DependenciesTest < Test::Unit::TestCase
       end
 
       test "prints dependencies based on given environment" do
-        with_dependencies "foo 1.0 (test)\nbar (development)\nbarz 2.0\nbaz 0.1 (test)" do
-          out, err = dep "list test"
-          assert_equal "foo 1.0 (test)\nbarz 2.0\nbaz 0.1 (test)\n", out
+        with_dependencies "foo 1.0\nbar\nbarz 2.0\nbaz 0.1" do
+          out, err = dep "list"
+          assert_equal "foo 1.0\nbar\nbarz 2.0\nbaz 0.1\n", out
         end
       end
 

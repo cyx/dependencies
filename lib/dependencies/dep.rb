@@ -2,20 +2,23 @@ class Dep
   class Dependency
     attr :name
     attr :version
-    attr :environment
     attr :url
 
-    def initialize(name, version = nil, environment = nil, url = nil)
+    def initialize(name, version = nil, url = nil)
       @name = name
       @version = version if version && !version.empty?
-      @environment = environment ? environment.split(/\, ?/) : []
       @url = url
     end
 
-    def for_environment?(env)
-      environment.empty? || environment.include?(env)
+    def require
+      require_vendor || require_gem
     end
 
+    def to_s
+      [name, version].compact.join(" ")
+    end
+
+  private
     def version_number
       version[/([\d\.]+)$/, 1]
     end
@@ -25,9 +28,7 @@ class Dep
     end
 
     def vendor_path
-      Dir[File.join("vendor", vendor_name, "lib")].first ||
-        Dir[File.join("vendor", "#{vendor_name}*", "lib")].first ||
-        Dir[File.join("vendor", name, "lib")].first
+      Dir[lib(vendor_name), lib("#{vendor_name}*"), lib(name)].first
     end
 
     def require_vendor
@@ -45,12 +46,8 @@ class Dep
       end
     end
 
-    def require
-      require_vendor || require_gem
-    end
-
-    def to_s
-      [name, version, ("(#{environment.join(", ")})" unless environment.empty?)].compact.join(" ")
+    def lib(name)
+      File.join('vendor', name, 'lib')
     end
   end
 
@@ -63,19 +60,13 @@ class Dep
     @missing = []
 
     dependencies.each_line do |line|
-      next unless line =~ /^([\w\-_]+) ?([<~=> \w\.]+)?(?: \(([\w, ]+)\))?(?: ([a-z]+:\/\/.+?))?$/
-      @dependencies << Dependency.new($1, $2, $3, $4)
+      next unless line =~ /^([\w\-_]+) ?([<~=> \w\.]+)?(?: ([a-z]+:\/\/.+?))?$/
+      @dependencies << Dependency.new($1, $2, $3)
     end
   end
 
-  def filter(environment)
-    @dependencies.select do |dep|
-      dep.for_environment?(environment)
-    end
-  end
-
-  def require(environment)
-    filter(environment).each do |dep|
+  def require
+    @dependencies.each do |dep|
       @missing << dep unless dep.require
     end
 
@@ -86,8 +77,7 @@ class Dep
         $stderr.puts "  #{dep}"
       end
 
-      $stderr.puts
-      $stderr.puts "Run `dep list` to view missing dependencies or `dep vendor --all` if you want to vendor them.\n\n"
+      $stderr.puts "\nRun `dep list` to view missing dependencies or `dep vendor --all` if you want to vendor them.\n\n"
       exit(1)
     end
 

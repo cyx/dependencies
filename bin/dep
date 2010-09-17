@@ -9,10 +9,10 @@ require "thor"
 class App < Thor
   include Thor::Actions
 
-  desc "list [ENV]", "lists dependencies"
-  def list(env = nil)
-    deps.filter(env).each { |dep| puts dep }
-    deps.require(env)
+  desc "list", "lists dependencies"
+  def list
+    deps.dependencies.each { |dep| puts dep }
+    deps.require
   end
 
   desc "vendor [NAME|--all]", "vendors the dependency to ./vendor"
